@@ -4,8 +4,8 @@
   "description": "Track your workouts, routines, and progress",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111111",
-  "theme_color": "#111111",
+  "background_color": "#0d1420",
+  "theme_color": "#0d1420",
   "orientation": "portrait",
   "scope": "/",
   "icons": [

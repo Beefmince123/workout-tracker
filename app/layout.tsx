@@ -40,7 +40,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Workout Tracker" />
-        <meta name="theme-color" content="#111111" />
+        <meta name="theme-color" content="#0d1420" />
       </head>
       <body className="bg-gray-900 text-white">
         <div className="max-w-md mx-auto min-h-screen relative bg-gray-900">
