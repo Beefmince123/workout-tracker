@@ -37,7 +37,9 @@ export interface RoutineExercise {
   routine_id: string;
   exercise_id: string;
   order_index: number;
-  target_sets?: number;
+  target_sets: number;
+  target_reps: number;
+  rest_seconds: number;
   created_at: string;
   exercise?: Exercise;
 }
@@ -198,7 +200,13 @@ export const createRoutine = async (
   userId: string,
   name: string,
   daysOfWeek: string[],
-  exercises: Array<{ exerciseId: string; order: number }>
+  exercises: Array<{
+    exerciseId: string;
+    order: number;
+    targetSets: number;
+    targetReps: number;
+    restSeconds: number;
+  }>
 ) => {
   // Create routine
   const { data: routineData, error: routineError } = await supabase
@@ -210,9 +218,9 @@ export const createRoutine = async (
     }])
     .select()
     .single();
-  
+
   if (routineError) throw routineError;
-  
+
   // Create routine exercises
   if (exercises.length > 0) {
     const { error: exerciseError } = await supabase
@@ -222,12 +230,15 @@ export const createRoutine = async (
           routine_id: routineData.id,
           exercise_id: ex.exerciseId,
           order_index: ex.order,
+          target_sets: ex.targetSets,
+          target_reps: ex.targetReps,
+          rest_seconds: ex.restSeconds,
         }))
       );
-    
+
     if (exerciseError) throw exerciseError;
   }
-  
+
   return routineData as Routine;
 };
 
@@ -256,6 +267,38 @@ export const fetchUserExercises = async (userId: string) => {
 
   if (error) throw error;
   return data as Exercise[];
+};
+
+// Most recent logged set for this exercise from a previous workout, used to
+// show "last time" performance while logging a new set.
+export const fetchLastExerciseLog = async (exerciseId: string, excludeWorkoutId: string) => {
+  const { data, error } = await supabase
+    .from('workout_logs')
+    .select('*')
+    .eq('exercise_id', exerciseId)
+    .neq('workout_id', excludeWorkoutId)
+    .order('logged_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as WorkoutLog | null;
+};
+
+export const deleteWorkout = async (workoutId: string) => {
+  const { error: logsError } = await supabase
+    .from('workout_logs')
+    .delete()
+    .eq('workout_id', workoutId);
+
+  if (logsError) throw logsError;
+
+  const { error } = await supabase
+    .from('workouts')
+    .delete()
+    .eq('id', workoutId);
+
+  if (error) throw error;
 };
 
 export const findOrCreateExercise = async (

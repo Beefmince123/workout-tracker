@@ -15,7 +15,14 @@ import {
 } from '@/lib/supabase';
 import { Plus, Play, Trash2, X } from 'lucide-react';
 
-type DraftExercise = { exerciseId: string; name: string; type: Exercise['type'] };
+type DraftExercise = {
+  exerciseId: string;
+  name: string;
+  type: Exercise['type'];
+  targetSets: number;
+  targetReps: number;
+  restSeconds: number;
+};
 
 export default function WorkoutPage() {
   const router = useRouter();
@@ -70,7 +77,13 @@ export default function WorkoutPage() {
         USER_ID,
         newRoutineName.trim(),
         selectedDays,
-        draftExercises.map((ex, idx) => ({ exerciseId: ex.exerciseId, order: idx }))
+        draftExercises.map((ex, idx) => ({
+          exerciseId: ex.exerciseId,
+          order: idx,
+          targetSets: ex.targetSets,
+          targetReps: ex.targetReps,
+          restSeconds: ex.restSeconds,
+        }))
       );
       await loadData();
       resetModal();
@@ -108,7 +121,14 @@ export default function WorkoutPage() {
 
       setDraftExercises((prev) => [
         ...prev,
-        { exerciseId: exercise.id, name: exercise.name, type: exercise.type },
+        {
+          exerciseId: exercise.id,
+          name: exercise.name,
+          type: exercise.type,
+          targetSets: 3,
+          targetReps: 10,
+          restSeconds: 90,
+        },
       ]);
       setAllExercises((prev) =>
         prev.some((ex) => ex.id === exercise.id) ? prev : [...prev, exercise]
@@ -121,6 +141,16 @@ export default function WorkoutPage() {
 
   const removeDraftExercise = (exerciseId: string) => {
     setDraftExercises((prev) => prev.filter((ex) => ex.exerciseId !== exerciseId));
+  };
+
+  const updateDraftExercise = (
+    exerciseId: string,
+    field: 'targetSets' | 'targetReps' | 'restSeconds',
+    value: number
+  ) => {
+    setDraftExercises((prev) =>
+      prev.map((ex) => (ex.exerciseId === exerciseId ? { ...ex, [field]: value } : ex))
+    );
   };
 
   const handleStartWorkout = async (routineId: string) => {
@@ -317,19 +347,79 @@ export default function WorkoutPage() {
                   {draftExercises.map((ex) => (
                     <div
                       key={ex.exerciseId}
-                      className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-4 py-2"
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 space-y-3"
                     >
-                      <div>
-                        <p className="text-white text-sm font-semibold">{ex.name}</p>
-                        <p className="text-xs text-gray-400 capitalize">{ex.type}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white text-sm font-semibold">{ex.name}</p>
+                          <p className="text-xs text-gray-400 capitalize">{ex.type}</p>
+                        </div>
+                        <button
+                          onClick={() => removeDraftExercise(ex.exerciseId)}
+                          className="text-gray-400 hover:text-white p-1"
+                          aria-label="Remove exercise"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeDraftExercise(ex.exerciseId)}
-                        className="text-gray-400 hover:text-white p-1"
-                        aria-label="Remove exercise"
-                      >
-                        <X size={16} />
-                      </button>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <label className="block">
+                          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                            Sets
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={ex.targetSets}
+                            onChange={(e) =>
+                              updateDraftExercise(
+                                ex.exerciseId,
+                                'targetSets',
+                                Math.max(1, parseInt(e.target.value, 10) || 1)
+                              )
+                            }
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                            {ex.type === 'timed' ? 'Seconds' : 'Reps'}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={ex.targetReps}
+                            onChange={(e) =>
+                              updateDraftExercise(
+                                ex.exerciseId,
+                                'targetReps',
+                                Math.max(1, parseInt(e.target.value, 10) || 1)
+                              )
+                            }
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                            Rest (s)
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={5}
+                            value={ex.restSeconds}
+                            onChange={(e) =>
+                              updateDraftExercise(
+                                ex.exerciseId,
+                                'restSeconds',
+                                Math.max(0, parseInt(e.target.value, 10) || 0)
+                              )
+                            }
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                          />
+                        </label>
+                      </div>
                     </div>
                   ))}
                 </div>

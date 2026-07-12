@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { USER_ID, fetchRecentWorkouts, fetchUserRoutines, createWorkout, parseTimestamp } from '@/lib/supabase';
+import {
+  USER_ID,
+  fetchRecentWorkouts,
+  fetchUserRoutines,
+  createWorkout,
+  deleteWorkout,
+  parseTimestamp,
+} from '@/lib/supabase';
 import { Workout, Routine } from '@/lib/supabase';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -47,6 +54,17 @@ export default function Home() {
     } catch (error) {
       console.error('Error starting workout:', error);
       setStarting(false);
+    }
+  };
+
+  const handleDeleteWorkout = async (workoutId: string) => {
+    if (!window.confirm('Delete this workout? This cannot be undone.')) return;
+
+    try {
+      await deleteWorkout(workoutId);
+      setWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
+    } catch (error) {
+      console.error('Error deleting workout:', error);
     }
   };
 
@@ -116,29 +134,40 @@ export default function Home() {
         ) : (
           <div className="space-y-3">
             {workouts.map((workout) => (
-              <Link
+              <div
                 key={workout.id}
-                href={`/workout/${workout.routine_id}/session/${workout.id}`}
-                className="block bg-gray-800/50 hover:bg-gray-800 rounded-xl p-4 transition-colors border border-gray-700"
+                className="flex items-center gap-2 bg-gray-800/50 hover:bg-gray-800 rounded-xl border border-gray-700 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-white text-sm">
-                      {workout.routine?.name || 'Workout'}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {parseTimestamp(workout.started_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  {workout.duration_minutes && (
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-blue-400">
-                        {workout.duration_minutes} min
+                <Link
+                  href={`/workout/${workout.routine_id}/session/${workout.id}`}
+                  className="flex-1 min-w-0 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white text-sm">
+                        {workout.routine?.name || 'Workout'}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {parseTimestamp(workout.started_at).toLocaleDateString()}
                       </div>
                     </div>
-                  )}
-                </div>
-              </Link>
+                    {workout.duration_minutes && (
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-blue-400">
+                          {workout.duration_minutes} min
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                <button
+                  onClick={() => handleDeleteWorkout(workout.id)}
+                  className="shrink-0 text-gray-500 hover:text-red-500 p-2 mr-2 transition-colors"
+                  aria-label="Delete workout"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             ))}
           </div>
         )}
