@@ -301,6 +301,38 @@ export const deleteWorkout = async (workoutId: string) => {
   if (error) throw error;
 };
 
+export const updateExerciseType = async (exerciseId: string, type: Exercise['type']) => {
+  const { error } = await supabase
+    .from('exercises')
+    .update({ type })
+    .eq('id', exerciseId);
+
+  if (error) throw error;
+};
+
+export const deleteExercise = async (exerciseId: string) => {
+  const { error: logsError } = await supabase
+    .from('workout_logs')
+    .delete()
+    .eq('exercise_id', exerciseId);
+
+  if (logsError) throw logsError;
+
+  const { error: routineExercisesError } = await supabase
+    .from('routine_exercises')
+    .delete()
+    .eq('exercise_id', exerciseId);
+
+  if (routineExercisesError) throw routineExercisesError;
+
+  const { error } = await supabase
+    .from('exercises')
+    .delete()
+    .eq('id', exerciseId);
+
+  if (error) throw error;
+};
+
 export const findOrCreateExercise = async (
   userId: string,
   name: string,

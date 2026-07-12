@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, USER_ID, fetchUserExercises, parseTimestamp } from '@/lib/supabase';
+import {
+  supabase,
+  USER_ID,
+  fetchUserExercises,
+  updateExerciseType,
+  deleteExercise,
+  parseTimestamp,
+  Exercise,
+} from '@/lib/supabase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Search } from 'lucide-react';
+import { Search, Trash2 } from 'lucide-react';
 
 interface ExerciseHistory {
   date: string;
@@ -15,11 +23,13 @@ interface ExerciseHistory {
 
 export default function ProfilePage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [exercises, setExercises] = useState<any[]>([]);
-  const [selectedExercise, setSelectedExercise] = useState<any>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [history, setHistory] = useState<ExerciseHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, best: 0, avg: 0, streak: 0 });
+  const [changingType, setChangingType] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const initData = async () => {
@@ -34,7 +44,7 @@ export default function ProfilePage() {
     initData();
   }, []);
 
-  const handleExerciseSelect = async (exercise: any) => {
+  const handleExerciseSelect = async (exercise: Exercise) => {
     setSelectedExercise(exercise);
     setLoading(true);
 
@@ -92,6 +102,44 @@ export default function ProfilePage() {
       console.error('Error loading exercise history:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeType = async (type: Exercise['type']) => {
+    if (!selectedExercise || changingType) return;
+    setChangingType(true);
+    try {
+      await updateExerciseType(selectedExercise.id, type);
+      setSelectedExercise((prev) => (prev ? { ...prev, type } : prev));
+      setExercises((prev) =>
+        prev.map((ex) => (ex.id === selectedExercise.id ? { ...ex, type } : ex))
+      );
+    } catch (error) {
+      console.error('Error updating exercise type:', error);
+    } finally {
+      setChangingType(false);
+    }
+  };
+
+  const handleDeleteExercise = async () => {
+    if (!selectedExercise || deleting) return;
+    if (
+      !window.confirm(
+        `Delete "${selectedExercise.name}" and all of its logged history? This cannot be undone.`
+      )
+    )
+      return;
+
+    setDeleting(true);
+    try {
+      await deleteExercise(selectedExercise.id);
+      setExercises((prev) => prev.filter((ex) => ex.id !== selectedExercise.id));
+      setSelectedExercise(null);
+      setHistory([]);
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -164,22 +212,40 @@ export default function ProfilePage() {
       ) : (
         <div className="space-y-6">
           {/* Back Button */}
-          <button
-            onClick={() => {
-              setSelectedExercise(null);
-              setHistory([]);
-            }}
-            className="text-blue-500 hover:text-blue-400 text-sm font-bold"
-          >
-            ← Back
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => {
+                setSelectedExercise(null);
+                setHistory([]);
+              }}
+              className="text-blue-500 hover:text-blue-400 text-sm font-bold"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleDeleteExercise}
+              disabled={deleting}
+              className="flex items-center gap-1 text-gray-500 hover:text-red-500 text-sm font-bold disabled:opacity-50 transition-colors"
+              aria-label="Delete exercise"
+            >
+              <Trash2 size={16} />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
 
           {/* Exercise Title */}
           <div>
             <h2 className="text-2xl font-bold text-white">{selectedExercise.name}</h2>
-            <p className="text-sm text-gray-400 mt-1 capitalize">
-              {selectedExercise.type}
-            </p>
+            <select
+              value={selectedExercise.type}
+              onChange={(e) => handleChangeType(e.target.value as Exercise['type'])}
+              disabled={changingType}
+              className="mt-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white capitalize focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            >
+              <option value="weighted">Weighted</option>
+              <option value="bodyweight">Bodyweight</option>
+              <option value="timed">Timed</option>
+            </select>
           </div>
 
           {/* Stats Cards */}
